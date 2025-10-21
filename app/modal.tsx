@@ -1,29 +1,27 @@
-import { Link } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { Redirect } from 'expo-router';
+import { useAuth } from '../contexts/AuthContext';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+export default function Index() {
+  const { user, loading } = useAuth();
 
-export default function ModalScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <ThemedText type="title">This is a modal</ThemedText>
-      <Link href="/" dismissTo style={styles.link}>
-        <ThemedText type="link">Go to home screen</ThemedText>
-      </Link>
-    </ThemedView>
-  );
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  // Redirect to appropriate screen
+  return <Redirect href={user ? '/(tabs)' : '/(auth)/login'} />;
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
 });
