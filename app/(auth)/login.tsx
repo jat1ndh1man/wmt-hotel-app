@@ -324,7 +324,7 @@ export default function LoginScreen() {
             {/* Forgot Password */}
             <TouchableOpacity
               style={styles.forgotPassword}
-              onPress={() => Toast.show({ type: 'info', text1: 'Coming Soon' })}
+              onPress={() =>router.replace('(auth)/forgot-password') }
             >
               <Text style={styles.forgotPasswordText}>Forgot password?</Text>
             </TouchableOpacity>

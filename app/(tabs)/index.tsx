@@ -412,7 +412,7 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={styles.addPropertyButton}
-            onPress={() => router.push('/dashboard/properties/add' as any)}
+            onPress={() => router.push('/properties/add' as any)}
             activeOpacity={0.8}
           >
             <LinearGradient
@@ -499,7 +499,7 @@ export default function DashboardScreen() {
               <TouchableOpacity
                 key={booking.id}
                 style={styles.bookingCard}
-                onPress={() => router.push(`/dashboard/bookings/${booking.id}` as any)}
+                onPress={() => router.push(`/bookings/${booking.id}` as any)}
                 activeOpacity={0.7}
               >
                 <View style={styles.bookingIcon}>
@@ -531,7 +531,7 @@ export default function DashboardScreen() {
         <View style={styles.quickActionsGrid}>
           <TouchableOpacity
             style={styles.quickActionCard}
-            onPress={() => router.push('/dashboard/properties' as any)}
+            onPress={() => router.push('/properties' as any)}
             activeOpacity={0.7}
           >
             <View style={styles.quickActionIcon}>
@@ -542,7 +542,7 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={styles.quickActionCard}
-            onPress={() => router.push('/dashboard/bookings/new' as any)}
+            onPress={() => router.push('/bookings/new' as any)}
             activeOpacity={0.7}
           >
             <View style={styles.quickActionIcon}>
@@ -553,7 +553,7 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={styles.quickActionCard}
-            onPress={() => router.push('/dashboard/guests' as any)}
+            onPress={() => router.push('/guests' as any)}
             activeOpacity={0.7}
           >
             <View style={styles.quickActionIcon}>
@@ -564,7 +564,7 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={styles.quickActionCard}
-            onPress={() => router.push('/dashboard/finance' as any)}
+            onPress={() => router.push('/finance' as any)}
             activeOpacity={0.7}
           >
             <View style={styles.quickActionIcon}>

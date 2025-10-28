@@ -31,6 +31,15 @@ export default function PropertyDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    email: '',
+    phone: '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
   useEffect(() => {
     if (propertyId) {
       loadProperty();
@@ -155,6 +164,50 @@ export default function PropertyDetailScreen() {
       suspended: { backgroundColor: '#FFEDD5', color: '#9A3412' },
     };
     return statusMap[status] || { backgroundColor: '#F3F4F6', color: '#1F2937' };
+  };
+
+  const handleEditPress = () => {
+    if (property) {
+      setEditForm({
+        name: property.name,
+        description: property.description || '',
+        email: property.email || '',
+        phone: property.phone || '',
+      });
+      setShowEditModal(true);
+    }
+  };
+
+  const handleUpdateProperty = async () => {
+    try {
+      setIsSaving(true);
+      
+      const updateData = {
+        name: editForm.name,
+        description: editForm.description,
+        email: editForm.email,
+        phone: editForm.phone,
+      };
+
+      await propertyAPI.update(propertyId, updateData);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Property updated successfully',
+      });
+      
+      setShowEditModal(false);
+      await loadProperty();
+    } catch (err: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: err.message || 'Failed to update property',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (loading && !refreshing) {
@@ -295,88 +348,71 @@ export default function PropertyDetailScreen() {
         </View>
 
         <View style={styles.statCard}>
-          <Ionicons name="stats-chart-outline" size={24} color="#1E3A8A" />
-          <Text style={styles.statValue}>{roomStats.occupancyRate}%</Text>
-          <Text style={styles.statLabel}>Occupancy</Text>
-        </View>
-
-        <View style={styles.statCard}>
           <Ionicons name="checkmark-circle-outline" size={24} color="#10B981" />
           <Text style={styles.statValue}>{roomStats.availableRooms}</Text>
           <Text style={styles.statLabel}>Available</Text>
         </View>
 
         <View style={styles.statCard}>
-          <Ionicons name="calendar-outline" size={24} color="#1E3A8A" />
-          <Text style={styles.statValue}>{property.total_bookings || 0}</Text>
-          <Text style={styles.statLabel}>Bookings</Text>
+          <Ionicons name="analytics-outline" size={24} color="#F59E0B" />
+          <Text style={styles.statValue}>{roomStats.occupancyRate}%</Text>
+          <Text style={styles.statLabel}>Occupancy</Text>
         </View>
       </View>
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.actionButton}
-          onPress={() => setShowEditModal(true)}
+          onPress={handleEditPress}
         >
           <Ionicons name="create-outline" size={20} color="#1E3A8A" />
-          <Text style={styles.actionButtonText}>Edit Property</Text>
+          <Text style={styles.actionButtonText}>Edit</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.actionButtonPrimary}
-          onPress={() => router.push(`/properties/${propertyId}/rooms` as any)}
-        >
+        <TouchableOpacity style={styles.actionButton}>
+          <Ionicons name="settings-outline" size={20} color="#1E3A8A" />
+          <Text style={styles.actionButtonText}>Settings</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionButtonPrimary}>
           <LinearGradient
             colors={['#1E3A8A', '#1E40AF']}
             style={styles.actionButtonGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Ionicons name="business-outline" size={20} color="#fff" />
-            <Text style={styles.actionButtonPrimaryText}>Manage Rooms</Text>
+            <Ionicons name="add" size={20} color="#fff" />
+            <Text style={styles.actionButtonPrimaryText}>Add Room</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
 
-      {/* Description */}
+      {/* Description Section */}
       {property.description && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About This Property</Text>
+          <Text style={styles.sectionTitle}>About Property</Text>
           <Text style={styles.description}>{property.description}</Text>
         </View>
       )}
 
-      {/* Room Types */}
+      {/* Room Types Section */}
       {roomTypes.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Room Types</Text>
-            <TouchableOpacity
-              onPress={() => router.push(`/properties/${propertyId}/rooms` as any)}
-            >
+            <TouchableOpacity>
               <Text style={styles.sectionLink}>View All</Text>
             </TouchableOpacity>
           </View>
-
-          {roomTypes.map((room) => (
-            <TouchableOpacity
-              key={room.id}
-              style={styles.roomCard}
-              onPress={() =>
-                router.push(`/properties/${propertyId}/rooms/${room.id}` as any)
-              }
-            >
+          {roomTypes.slice(0, 3).map((room) => (
+            <TouchableOpacity key={room.id} style={styles.roomCard}>
               {room.images && room.images.length > 0 && (
-                <Image
-                  source={{ uri: room.images[0] }}
-                  style={styles.roomImage}
-                  resizeMode="cover"
-                />
+                <Image source={{ uri: room.images[0] }} style={styles.roomImage} />
               )}
               <View style={styles.roomInfo}>
                 <Text style={styles.roomName}>{room.name}</Text>
-                <Text style={styles.roomBedType}>{room.bed_type.replace('_', ' ')}</Text>
+                <Text style={styles.roomBedType}>{room.bed_type}</Text>
                 <View style={styles.roomStats}>
                   <Text style={styles.roomPrice}>{formatCurrency(room.base_rate)}/night</Text>
                   <Text style={styles.roomAvailability}>
@@ -384,7 +420,6 @@ export default function PropertyDetailScreen() {
                   </Text>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
             </TouchableOpacity>
           ))}
         </View>
@@ -394,18 +429,6 @@ export default function PropertyDetailScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Contact Information</Text>
         <View style={styles.contactGrid}>
-          {property.phone && (
-            <View style={styles.contactItem}>
-              <View style={styles.contactIcon}>
-                <Ionicons name="call-outline" size={20} color="#1E3A8A" />
-              </View>
-              <View>
-                <Text style={styles.contactLabel}>Phone</Text>
-                <Text style={styles.contactValue}>{property.phone}</Text>
-              </View>
-            </View>
-          )}
-
           {property.email && (
             <View style={styles.contactItem}>
               <View style={styles.contactIcon}>
@@ -417,28 +440,28 @@ export default function PropertyDetailScreen() {
               </View>
             </View>
           )}
-
-          {property.website && (
+          {property.phone && (
             <View style={styles.contactItem}>
               <View style={styles.contactIcon}>
-                <Ionicons name="globe-outline" size={20} color="#1E3A8A" />
+                <Ionicons name="call-outline" size={20} color="#1E3A8A" />
               </View>
               <View>
-                <Text style={styles.contactLabel}>Website</Text>
-                <Text style={styles.contactValue}>{property.website}</Text>
+                <Text style={styles.contactLabel}>Phone</Text>
+                <Text style={styles.contactValue}>{property.phone}</Text>
               </View>
             </View>
           )}
         </View>
       </View>
 
-      {/* Location */}
+      {/* Location Details */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Location</Text>
         <View style={styles.locationDetails}>
           <Text style={styles.locationAddress}>{property.address}</Text>
           <Text style={styles.locationCity}>
-            {property.city}, {property.state} {property.pincode}
+            {property.area && `${property.area}, `}
+            {property.city}, {property.state} - {property.pincode}
           </Text>
           {property.landmark && (
             <Text style={styles.locationLandmark}>Near {property.landmark}</Text>
@@ -462,38 +485,29 @@ export default function PropertyDetailScreen() {
 
       {/* Policies */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Property Policies</Text>
+        <Text style={styles.sectionTitle}>Policies</Text>
         <View style={styles.policyGrid}>
-          {property.check_in_time && property.check_out_time && (
-            <>
-              <View style={styles.policyItem}>
-                <Text style={styles.policyLabel}>Check-in</Text>
-                <Text style={styles.policyValue}>{formatTime(property.check_in_time)}</Text>
-              </View>
-              <View style={styles.policyItem}>
-                <Text style={styles.policyLabel}>Check-out</Text>
-                <Text style={styles.policyValue}>{formatTime(property.check_out_time)}</Text>
-              </View>
-            </>
-          )}
-          {property.security_deposit && property.security_deposit > 0 && (
-            <View style={styles.policyItem}>
-              <Text style={styles.policyLabel}>Security Deposit</Text>
-              <Text style={styles.policyValue}>
-                {formatCurrency(property.security_deposit)}
-              </Text>
-            </View>
-          )}
+          <View style={styles.policyItem}>
+            <Text style={styles.policyLabel}>Check-in</Text>
+            <Text style={styles.policyValue}>{formatTime(property.check_in_time)}</Text>
+          </View>
+          <View style={styles.policyItem}>
+            <Text style={styles.policyLabel}>Check-out</Text>
+            <Text style={styles.policyValue}>{formatTime(property.check_out_time)}</Text>
+          </View>
           {property.cancellation_policy && (
             <View style={styles.policyItem}>
-              <Text style={styles.policyLabel}>Cancellation Policy</Text>
-              <Text style={styles.policyValue}>
-                {property.cancellation_policy.replace('_', ' ')}
-              </Text>
+              <Text style={styles.policyLabel}>Cancellation</Text>
+              <Text style={styles.policyValue}>{property.cancellation_policy}</Text>
+            </View>
+          )}
+          {property.security_deposit && (
+            <View style={styles.policyItem}>
+              <Text style={styles.policyLabel}>Security Deposit</Text>
+              <Text style={styles.policyValue}>{formatCurrency(property.security_deposit)}</Text>
             </View>
           )}
         </View>
-
         {property.house_rules && (
           <View style={styles.houseRules}>
             <Text style={styles.houseRulesTitle}>House Rules</Text>
@@ -503,6 +517,108 @@ export default function PropertyDetailScreen() {
       </View>
 
       <View style={styles.bottomPadding} />
+
+      {/* Edit Property Modal */}
+      <Modal
+        visible={showEditModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Property</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Property Name *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={editForm.name}
+                  onChangeText={(text) => setEditForm({ ...editForm, name: text })}
+                  placeholder="Enter property name"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Description</Text>
+                <TextInput
+                  style={[styles.formInput, styles.formTextArea]}
+                  value={editForm.description}
+                  onChangeText={(text) => setEditForm({ ...editForm, description: text })}
+                  placeholder="Enter property description"
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Contact Email</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={editForm.email}
+                  onChangeText={(text) => setEditForm({ ...editForm, email: text })}
+                  placeholder="contact@property.com"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>Contact Phone</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={editForm.phone}
+                  onChangeText={(text) => setEditForm({ ...editForm, phone: text })}
+                  placeholder="+91 1234567890"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="phone-pad"
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowEditModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.modalSaveButton}
+                onPress={handleUpdateProperty}
+                disabled={isSaving || !editForm.name.trim()}
+              >
+                <LinearGradient
+                  colors={['#1E3A8A', '#1E40AF']}
+                  style={styles.modalSaveButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark" size={20} color="#fff" />
+                      <Text style={styles.modalSaveButtonText}>Save Changes</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -527,21 +643,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 32,
     backgroundColor: '#F9FAFB',
   },
   errorIcon: {
     width: 80,
     height: 80,
-    backgroundColor: '#FEE2E2',
     borderRadius: 40,
+    backgroundColor: '#FEE2E2',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   errorTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#111827',
     marginBottom: 8,
   },
@@ -556,33 +672,35 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   retryButton: {
-    backgroundColor: '#1E3A8A',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
+    backgroundColor: '#1E3A8A',
   },
   retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
+    color: '#fff',
   },
   backButton: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#fff',
   },
   backButtonText: {
-    color: '#374151',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
+    color: '#6B7280',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -594,8 +712,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#111827',
     flex: 1,
     textAlign: 'center',
@@ -605,19 +723,20 @@ const styles = StyleSheet.create({
   },
   mainImage: {
     width: '100%',
-    height: 300,
+    height: 250,
   },
   thumbnailContainer: {
-    padding: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   thumbnail: {
-    width: 80,
+    width: 60,
     height: 60,
     borderRadius: 8,
     marginRight: 8,
-    overflow: 'hidden',
     borderWidth: 2,
     borderColor: 'transparent',
+    overflow: 'hidden',
   },
   thumbnailActive: {
     borderColor: '#1E3A8A',
@@ -629,11 +748,10 @@ const styles = StyleSheet.create({
   propertyInfo: {
     padding: 16,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   propertyHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
   propertyName: {
@@ -952,5 +1070,103 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 24,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  modalBody: {
+    padding: 20,
+    maxHeight: 500,
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#111827',
+    backgroundColor: '#F9FAFB',
+  },
+  formTextArea: {
+    height: 100,
+    paddingTop: 12,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  modalCancelButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  modalCancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  modalSaveButton: {
+    flex: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  modalSaveButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    gap: 8,
+  },
+  modalSaveButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

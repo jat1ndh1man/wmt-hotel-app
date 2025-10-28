@@ -13,6 +13,7 @@ import {
   Dimensions,
   RefreshControl,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { supabase } from '../../../lib/supabaseClient';
@@ -27,6 +28,7 @@ export default function SettingsScreen() {
   const [activeTab, setActiveTab] = useState<'profile' | 'customization' | 'billing' | 'security'>('profile');
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const [passwordVisible, setPasswordVisible] = useState({
     current: false,
@@ -143,6 +145,52 @@ export default function SettingsScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchUserData();
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Confirm Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoggingOut(true);
+
+              // Sign out from Supabase
+              const { error } = await supabase.auth.signOut();
+
+              if (error) {
+                throw error;
+              }
+
+              // Clear all data from AsyncStorage
+              await AsyncStorage.clear();
+
+              // Alternative: Clear specific keys if needed
+              // await AsyncStorage.removeItem('userToken');
+              // await AsyncStorage.removeItem('userSession');
+              // await AsyncStorage.removeItem('userData');
+
+              // Redirect to login screen
+            router.replace('/login');
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            } finally {
+              setLoggingOut(false);
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleProfileSave = async () => {
@@ -426,11 +474,29 @@ export default function SettingsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
-        <Text style={styles.subtitle}>Manage your account settings</Text>
-   <TouchableOpacity onPress={() => router.push('/(tabs)/settings/profile')}>
-  <Text>View KYC Profile</Text>
-</TouchableOpacity>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.title}>Settings</Text>
+            <Text style={styles.subtitle}>Manage your account settings</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            disabled={loggingOut}
+          >
+            {loggingOut ? (
+              <ActivityIndicator size="small" color="#dc2626" />
+            ) : (
+              <>
+                <Icon name="logout" size={20} color="#dc2626" />
+                <Text style={styles.logoutText}>Logout</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/settings/profile')}>
+          <Text style={styles.kycLink}>View KYC Profile</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
@@ -535,12 +601,11 @@ export default function SettingsScreen() {
                 onChangeText={text => setCustomization(prev => ({ ...prev, business_name: text }))}
                 placeholder="Enter your business name"
               />
-              <Text style={styles.helperText}>This will be displayed on your dashboard</Text>
             </View>
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>Business Logo</Text>
-              
+
               {customization.logo_url ? (
                 <View style={styles.logoContainer}>
                   <View style={styles.logoPreview}>
@@ -548,22 +613,20 @@ export default function SettingsScreen() {
                   </View>
                   <View style={styles.logoInfo}>
                     <Text style={styles.logoTitle}>Logo uploaded</Text>
-                    <Text style={styles.logoDescription}>This logo will appear on your dashboard</Text>
+                    <Text style={styles.logoDescription}>Current business logo</Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={handleLogoRemove}
-                    disabled={saving}
-                  >
-                    <Icon name="close" size={20} color="#ef4444" />
+                  <TouchableOpacity style={styles.removeButton} onPress={handleLogoRemove}>
+                    <Icon name="delete" size={24} color="#dc2626" />
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity style={styles.uploadBox} onPress={handleLogoUpload}>
-                  <Icon name="image" size={48} color="#cbd5e1" />
-                  <Text style={styles.uploadTitle}>Upload your business logo</Text>
-                  <Text style={styles.uploadDescription}>Tap to select image</Text>
-                  <Text style={styles.uploadHint}>Supports: JPG, PNG (max 5MB)</Text>
+                <TouchableOpacity style={styles.uploadBox} onPress={handleLogoUpload} disabled={uploadingLogo}>
+                  <Icon name="cloud-upload" size={48} color="#cbd5e1" />
+                  <Text style={styles.uploadTitle}>
+                    {uploadingLogo ? 'Uploading...' : 'Upload Business Logo'}
+                  </Text>
+                  <Text style={styles.uploadDescription}>Click to upload your business logo</Text>
+                  <Text style={styles.uploadHint}>PNG, JPG up to 5MB</Text>
                 </TouchableOpacity>
               )}
 
@@ -574,7 +637,7 @@ export default function SettingsScreen() {
                     onPress={handleLogoUpload}
                     disabled={uploadingLogo}
                   >
-                    <Icon name="upload" size={16} color="#1e3a8a" />
+                    <Icon name="refresh" size={18} color="#1e3a8a" />
                     <Text style={styles.replaceButtonText}>
                       {uploadingLogo ? 'Uploading...' : 'Replace Logo'}
                     </Text>
@@ -585,7 +648,7 @@ export default function SettingsScreen() {
 
             {(customization.business_name || customization.logo_url) && (
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Dashboard Preview</Text>
+                <Text style={styles.label}>Preview</Text>
                 <View style={styles.previewBox}>
                   <View style={styles.previewHeader}>
                     {customization.logo_url && (
@@ -820,6 +883,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -829,6 +898,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
     marginTop: 4,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#fee2e2',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  logoutText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#dc2626',
+  },
+  kycLink: {
+    fontSize: 14,
+    color: '#1e3a8a',
+    fontWeight: '500',
   },
   tabsScroll: {
     maxHeight: 50,

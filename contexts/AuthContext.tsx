@@ -28,20 +28,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     checkUser();
+
+    // 🔹 Listen for Supabase auth state changes
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        await AsyncStorage.clear();
+        setUser(null);
+        router.replace('/login'); // ✅ Correct path
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        const userData: User = {
+          id: session.user.id,
+          email: session.user.email!,
+          full_name: session.user.user_metadata?.full_name,
+          mobile: session.user.user_metadata?.mobile,
+        };
+        await AsyncStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+        router.replace('/'); // ✅ Go to home tabs
+      }
+    });
+
+    return () => {
+      listener?.subscription.unsubscribe();
+    };
   }, []);
 
-  // Auto-redirect based on auth state
+  // 🔹 Auto-redirect based on auth state
   useEffect(() => {
     if (loading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!user && !inAuthGroup) {
-      // Redirect to login if not authenticated
-      router.replace('/(auth)/login');
+      router.replace('/login'); // ✅ Corrected
     } else if (user && inAuthGroup) {
-      // Redirect to main app if authenticated
-      router.replace('/(tabs)');
+      router.replace('/'); // ✅ Corrected
     }
   }, [user, segments, loading]);
 
@@ -61,18 +82,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (userData: User) => {
     await AsyncStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
+    router.replace('/'); // ✅ Go to main tabs
   };
 
   const logout = async () => {
-    await AsyncStorage.multiRemove([
-      'user',
-      'userProfile',
-      'isLoggedIn',
-      'userId',
-      'userEmail'
-    ]);
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      await AsyncStorage.multiRemove([
+        'user',
+        'userProfile',
+        'isLoggedIn',
+        'userId',
+        'userEmail'
+      ]);
+      await supabase.auth.signOut();
+      setUser(null);
+      router.replace('/login'); // ✅ Redirect immediately
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (

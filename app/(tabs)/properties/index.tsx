@@ -125,27 +125,27 @@ export default function PropertiesScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>My Properties</Text>
-          <Text style={styles.headerSubtitle}>Manage your hotel properties and room inventory</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('/properties/add' as any)}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={['#1E3A8A', '#1E40AF']}
-            style={styles.addButtonGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={styles.addButtonText}>Add Property</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+   <View style={styles.header}>
+  <View style={styles.headerTextContainer}>
+    <Text style={styles.headerTitle}>My Properties</Text>
+    <Text style={styles.headerSubtitle}>Manage your hotel properties and room inventory</Text>
+  </View>
+  <TouchableOpacity
+    style={styles.addButton}
+    onPress={() => router.push('/properties/add' as any)}
+    activeOpacity={0.8}
+  >
+    <LinearGradient
+      colors={['#1E3A8A', '#1E40AF']}
+      style={styles.addButtonGradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+    >
+      <Ionicons name="add" size={20} color="#fff" />
+      <Text style={styles.addButtonText}>Add Property</Text>
+    </LinearGradient>
+  </TouchableOpacity>
+</View>
 
       {/* Stats Cards */}
       <View style={styles.statsGrid}>
@@ -384,14 +384,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingHorizontal: 16,
+  paddingVertical: 16,
+  gap: 12,
   },
+  headerTextContainer: {
+  flex: 1,
+  marginRight: 8,
+},
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#111827',
     marginBottom: 4,
   },
@@ -402,13 +408,17 @@ const styles = StyleSheet.create({
   addButton: {
     borderRadius: 10,
     overflow: 'hidden',
+    minWidth: 140,
+    maxWidth: 160,
+    
   },
   addButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    gap: 6,
+   flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingVertical: 12,
+  paddingHorizontal: 16,
+  gap: 6,
   },
   addButtonText: {
     color: '#fff',

@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Toast from 'react-native-toast-message';
 import { supabase } from '../../../lib/supabaseClient';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface Guest {
   id: string;
@@ -77,6 +78,13 @@ export default function NewBookingScreen() {
   const [loading, setLoading] = useState(false);
   const [availableRooms, setAvailableRooms] = useState(0);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [guestSearchQuery, setGuestSearchQuery] = useState('');
+
+  // DatePicker states
+  const [showCheckInPicker, setShowCheckInPicker] = useState(false);
+  const [showCheckOutPicker, setShowCheckOutPicker] = useState(false);
+  const [checkInDateObj, setCheckInDateObj] = useState<Date>(new Date());
+  const [checkOutDateObj, setCheckOutDateObj] = useState<Date>(new Date(Date.now() + 86400000));
 
   const [formData, setFormData] = useState<FormData>({
     guestType: 'new',
@@ -133,14 +141,12 @@ export default function NewBookingScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Load guests
       const { data: guestsData } = await supabase
         .from('guests')
         .select('*')
         .order('name');
       setGuests(guestsData || []);
 
-      // Load properties
       const { data: propertiesData } = await supabase
         .from('hotels')
         .select('id, name, city')
@@ -148,7 +154,6 @@ export default function NewBookingScreen() {
         .order('name');
       setProperties(propertiesData || []);
 
-      // Load room types
       const { data: roomTypesData } = await supabase
         .from('room_types')
         .select('*')
@@ -220,6 +225,53 @@ export default function NewBookingScreen() {
       const taxes = baseAmount * 0.18;
       const total = baseAmount + taxes;
       setFormData((prev) => ({ ...prev, totalAmount: total.toString() }));
+    }
+  };
+
+  // DatePicker helper functions
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDisplayDate = (dateString: string): string => {
+    if (!dateString) return 'Select date';
+    const date = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'short', 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    };
+    return date.toLocaleDateString('en-US', options);
+  };
+
+  const onCheckInDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowCheckInPicker(false);
+    }
+    if (selectedDate) {
+      setCheckInDateObj(selectedDate);
+      const formattedDate = formatDate(selectedDate);
+      handleInputChange('checkInDate', formattedDate);
+      if (formData.checkOutDate && new Date(formData.checkOutDate) <= selectedDate) {
+        const nextDay = new Date(selectedDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        setCheckOutDateObj(nextDay);
+        handleInputChange('checkOutDate', formatDate(nextDay));
+      }
+    }
+  };
+
+  const onCheckOutDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowCheckOutPicker(false);
+    }
+    if (selectedDate) {
+      setCheckOutDateObj(selectedDate);
+      handleInputChange('checkOutDate', formatDate(selectedDate));
     }
   };
 
@@ -344,8 +396,16 @@ export default function NewBookingScreen() {
         guestEmail: guest.email,
         guestPhone: guest.phone || '',
       }));
+      setGuestSearchQuery('');
     }
   };
+
+  const filteredGuests = guests.filter(
+    (guest) =>
+      guest.name.toLowerCase().includes(guestSearchQuery.toLowerCase()) ||
+      guest.email.toLowerCase().includes(guestSearchQuery.toLowerCase()) ||
+      guest.phone?.includes(guestSearchQuery)
+  );
 
   const handleCreateBooking = async () => {
     const requiredTabs = ['guest', 'booking', 'payment'];
@@ -373,7 +433,6 @@ export default function NewBookingScreen() {
 
       let guestId = formData.existingGuestId;
 
-      // Create new guest if needed
       if (formData.guestType === 'new' && !guestId) {
         const { data: newGuest, error: guestError } = await supabase
           .from('guests')
@@ -391,13 +450,11 @@ export default function NewBookingScreen() {
         guestId = newGuest.id;
       }
 
-      // Generate booking reference
       const bookingReference = `BK${Date.now().toString().slice(-6)}${Math.random()
         .toString(36)
         .substring(2, 5)
         .toUpperCase()}`;
 
-      // Create booking
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .insert([
@@ -428,7 +485,6 @@ export default function NewBookingScreen() {
 
       if (bookingError) throw bookingError;
 
-      // Create booking status entry
       await supabase.from('booking_status').insert([
         {
           booking_id: booking.id,
@@ -510,21 +566,53 @@ export default function NewBookingScreen() {
 
             {formData.guestType === 'existing' && (
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Select Guest</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {guests.map((guest) => (
-                    <TouchableOpacity
-                      key={guest.id}
-                      style={[
-                        styles.guestCard,
-                        formData.existingGuestId === guest.id && styles.guestCardActive,
-                      ]}
-                      onPress={() => handleGuestSelection(guest.id)}
-                    >
-                      <Text style={styles.guestCardName}>{guest.name}</Text>
-                      <Text style={styles.guestCardEmail}>{guest.email}</Text>
+                <Text style={styles.label}>Search & Select Guest</Text>
+                
+                {/* Search Bar */}
+                <View style={styles.searchContainer}>
+                  <Ionicons name="search" size={18} color="#6B7280" />
+                  <TextInput
+                    style={styles.searchInput}
+                    value={guestSearchQuery}
+                    onChangeText={setGuestSearchQuery}
+                    placeholder="Search by name, email or phone"
+                    placeholderTextColor="#9CA3AF"
+                  />
+                  {guestSearchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setGuestSearchQuery('')}>
+                      <Ionicons name="close-circle" size={18} color="#9CA3AF" />
                     </TouchableOpacity>
-                  ))}
+                  )}
+                </View>
+
+                {/* Guest List */}
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.guestListContainer}
+                >
+                  {filteredGuests.length > 0 ? (
+                    filteredGuests.map((guest) => (
+                      <TouchableOpacity
+                        key={guest.id}
+                        style={[
+                          styles.guestCard,
+                          formData.existingGuestId === guest.id && styles.guestCardActive,
+                        ]}
+                        onPress={() => handleGuestSelection(guest.id)}
+                      >
+                        <Text style={styles.guestCardName}>{guest.name}</Text>
+                        <Text style={styles.guestCardEmail} numberOfLines={1}>{guest.email}</Text>
+                        {guest.phone && (
+                          <Text style={styles.guestCardPhone}>{guest.phone}</Text>
+                        )}
+                      </TouchableOpacity>
+                    ))
+                  ) : (
+                    <View style={styles.noResultsContainer}>
+                      <Text style={styles.noResultsText}>No guests found</Text>
+                    </View>
+                  )}
                 </ScrollView>
               </View>
             )}
@@ -623,30 +711,56 @@ export default function NewBookingScreen() {
             <View style={styles.row}>
               <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
                 <Text style={styles.label}>Check-in Date *</Text>
-                <TextInput
-                  style={[styles.input, errors.checkInDate && styles.inputError]}
-                  value={formData.checkInDate}
-                  onChangeText={(text) => handleInputChange('checkInDate', text)}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#9CA3AF"
-                />
+                <TouchableOpacity
+                  style={[styles.datePickerButton, errors.checkInDate && styles.inputError]}
+                  onPress={() => setShowCheckInPicker(true)}
+                >
+                  <Ionicons name="calendar-outline" size={20} color="#1E3A8A" />
+                  <Text style={styles.datePickerText}>
+                    {formatDisplayDate(formData.checkInDate)}
+                  </Text>
+                </TouchableOpacity>
                 {errors.checkInDate && <Text style={styles.errorText}>{errors.checkInDate}</Text>}
               </View>
 
               <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
                 <Text style={styles.label}>Check-out Date *</Text>
-                <TextInput
-                  style={[styles.input, errors.checkOutDate && styles.inputError]}
-                  value={formData.checkOutDate}
-                  onChangeText={(text) => handleInputChange('checkOutDate', text)}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#9CA3AF"
-                />
+                <TouchableOpacity
+                  style={[styles.datePickerButton, errors.checkOutDate && styles.inputError]}
+                  onPress={() => setShowCheckOutPicker(true)}
+                >
+                  <Ionicons name="calendar-outline" size={20} color="#1E3A8A" />
+                  <Text style={styles.datePickerText}>
+                    {formatDisplayDate(formData.checkOutDate)}
+                  </Text>
+                </TouchableOpacity>
                 {errors.checkOutDate && (
                   <Text style={styles.errorText}>{errors.checkOutDate}</Text>
                 )}
               </View>
             </View>
+
+            {showCheckInPicker && (
+              <DateTimePicker
+                value={checkInDateObj}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onCheckInDateChange}
+                minimumDate={new Date()}
+                onTouchCancel={() => setShowCheckInPicker(false)}
+              />
+            )}
+
+            {showCheckOutPicker && (
+              <DateTimePicker
+                value={checkOutDateObj}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onCheckOutDateChange}
+                minimumDate={formData.checkInDate ? new Date(new Date(formData.checkInDate).getTime() + 86400000) : new Date()}
+                onTouchCancel={() => setShowCheckOutPicker(false)}
+              />
+            )}
 
             <View style={styles.row}>
               <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
@@ -681,7 +795,7 @@ export default function NewBookingScreen() {
 
             {!checkingAvailability && availableRooms > 0 && formData.roomTypeId && (
               <View style={styles.availabilityInfo}>
-                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Ionicons name="checkmark-circle" size={18} color="#10B981" />
                 <Text style={styles.availabilityText}>
                   {availableRooms} room{availableRooms !== 1 ? 's' : ''} available
                 </Text>
@@ -960,16 +1074,20 @@ export default function NewBookingScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Progress */}
+      {/* Compact Progress Bar */}
       <View style={styles.progressContainer}>
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: `${getProgressPercentage()}%` }]} />
         </View>
-        <Text style={styles.progressText}>{Math.round(getProgressPercentage())}% Complete</Text>
       </View>
 
-      {/* Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsContainer}>
+      {/* Compact Tabs */}
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.tabsContainer}
+        contentContainerStyle={styles.tabsContent}
+      >
         {TABS.map((tab, index) => {
           const isActive = currentTab === tab.id;
           const isCompleted = completedTabs.includes(tab.id);
@@ -1000,7 +1118,7 @@ export default function NewBookingScreen() {
                 ]}
               >
                 {isCompleted ? (
-                  <Ionicons name="checkmark" size={16} color="#fff" />
+                  <Ionicons name="checkmark" size={12} color="#fff" />
                 ) : (
                   <Text style={[styles.tabNumberText, isActive && styles.tabNumberTextActive]}>
                     {index + 1}
@@ -1008,7 +1126,6 @@ export default function NewBookingScreen() {
                 )}
               </View>
               <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
-              {tab.required && !isCompleted && <View style={styles.requiredDot} />}
             </TouchableOpacity>
           );
         })}
@@ -1019,7 +1136,7 @@ export default function NewBookingScreen() {
         {renderTabContent()}
       </ScrollView>
 
-      {/* Navigation */}
+      {/* Footer Navigation */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.footerButton, currentTab === 'guest' && styles.footerButtonDisabled]}
@@ -1104,50 +1221,50 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   progressContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   progressBar: {
-    height: 8,
+    height: 4,
     backgroundColor: '#E5E7EB',
-    borderRadius: 4,
+    borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: 8,
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#1E3A8A',
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'right',
+    borderRadius: 2,
   },
   tabsContainer: {
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    maxHeight: 50,
+  },
+  tabsContent: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
   },
   tabItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 24,
+    marginRight: 20,
+    paddingVertical: 4,
   },
   tabItemDisabled: {
     opacity: 0.5,
   },
   tabNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    marginRight: 6,
   },
   tabNumberActive: {
     backgroundColor: '#1E3A8A',
@@ -1156,7 +1273,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
   },
   tabNumberText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#6B7280',
   },
@@ -1164,20 +1281,13 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#6B7280',
     fontWeight: '500',
   },
   tabLabelActive: {
     color: '#1E3A8A',
     fontWeight: '600',
-  },
-  requiredDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#F59E0B',
-    marginTop: 2,
   },
   content: {
     flex: 1,
@@ -1186,7 +1296,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 16,
@@ -1201,12 +1311,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    height: 48,
+    height: 44,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 8,
     paddingHorizontal: 12,
-    fontSize: 16,
+    fontSize: 15,
     color: '#111827',
     backgroundColor: '#fff',
   },
@@ -1225,7 +1335,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    fontSize: 16,
+    fontSize: 15,
     color: '#111827',
     backgroundColor: '#fff',
     textAlignVertical: 'top',
@@ -1242,7 +1352,7 @@ const styles = StyleSheet.create({
   },
   segmentButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
     backgroundColor: '#fff',
   },
@@ -1257,142 +1367,181 @@ const styles = StyleSheet.create({
   segmentTextActive: {
     color: '#fff',
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+    marginLeft: 8,
+    marginRight: 8,
+  },
+  guestListContainer: {
+    maxHeight: 100,
+  },
   guestCard: {
-    width: 200,
+    width: 180,
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     backgroundColor: '#fff',
-    marginRight: 12,
+    marginRight: 10,
   },
   guestCardActive: {
     borderColor: '#1E3A8A',
     backgroundColor: '#EFF6FF',
+    borderWidth: 2,
   },
   guestCardName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#111827',
+    marginBottom: 2,
   },
   guestCardEmail: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
-    marginTop: 4,
+    marginBottom: 2,
+  },
+  guestCardPhone: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  noResultsContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 14,
+    color: '#9CA3AF',
   },
   propertyCard: {
-    width: 160,
-    padding: 12,
+    width: 140,
+    padding: 10,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     backgroundColor: '#fff',
-    marginRight: 12,
+    marginRight: 10,
   },
   propertyCardActive: {
     borderColor: '#1E3A8A',
     backgroundColor: '#EFF6FF',
+    borderWidth: 2,
   },
   propertyCardName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#111827',
   },
   propertyCardCity: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
-    marginTop: 4,
+    marginTop: 2,
   },
   roomTypeCard: {
-    width: 140,
-    padding: 12,
+    width: 130,
+    padding: 10,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     backgroundColor: '#fff',
-    marginRight: 12,
+    marginRight: 10,
   },
   roomTypeCardActive: {
     borderColor: '#1E3A8A',
     backgroundColor: '#EFF6FF',
+    borderWidth: 2,
   },
   roomTypeCardName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#111827',
+    marginBottom: 4,
   },
   roomTypeCardPrice: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#1E3A8A',
-    marginTop: 4,
+    marginBottom: 2,
   },
   roomTypeCardCapacity: {
     fontSize: 10,
     color: '#6B7280',
-    marginTop: 2,
   },
   availabilityCheck: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 10,
     backgroundColor: '#F3F4F6',
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   availabilityInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 10,
     backgroundColor: '#D1FAE5',
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   availabilityText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#065F46',
     marginLeft: 8,
     fontWeight: '600',
   },
   priceBreakdown: {
-    padding: 16,
+    padding: 14,
     backgroundColor: '#F9FAFB',
-    borderRadius: 12,
+    borderRadius: 10,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   breakdownTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   breakdownLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
   },
   breakdownValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#111827',
   },
   breakdownTotal: {
-    marginTop: 8,
-    paddingTop: 12,
+    marginTop: 6,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
   },
   breakdownTotalLabel: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#111827',
   },
   breakdownTotalValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#1E3A8A',
   },
@@ -1402,8 +1551,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#D1D5DB',
@@ -1414,7 +1563,7 @@ const styles = StyleSheet.create({
     borderColor: '#1E3A8A',
   },
   optionText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#374151',
     textTransform: 'capitalize',
@@ -1423,8 +1572,8 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   sourceButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#D1D5DB',
@@ -1436,7 +1585,7 @@ const styles = StyleSheet.create({
     borderColor: '#1E3A8A',
   },
   sourceText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#374151',
     textTransform: 'capitalize',
@@ -1445,48 +1594,50 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   reviewSection: {
-    padding: 16,
+    padding: 14,
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 10,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   reviewSectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 8,
   },
   reviewText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#374151',
     marginBottom: 4,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: 14,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    gap: 12,
+    gap: 10,
   },
   footerButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 48,
+    height: 44,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     backgroundColor: '#fff',
-    gap: 8,
+    gap: 6,
   },
   footerButtonDisabled: {
     opacity: 0.5,
   },
   footerButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#1E3A8A',
   },
@@ -1502,12 +1653,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 48,
-    gap: 8,
+    height: 44,
+    gap: 6,
   },
   footerButtonPrimaryText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#fff',
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  datePickerText: {
+    fontSize: 14,
+    color: '#111827',
+    flex: 1,
   },
 });

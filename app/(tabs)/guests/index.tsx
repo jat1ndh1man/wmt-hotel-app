@@ -326,10 +326,8 @@ export default function GuestManagementScreen() {
   const renderGuestCard = ({ item: guest }: any) => {
     const statusColors = getStatusColor(guest.status);
     return (
-      <TouchableOpacity
-        style={styles.guestCard}
-        onPress={() => router.push(`/guests/${guest.id}`)}
-      >
+      <View style={styles.guestCard}>
+        {/* Guest Header */}
         <View style={styles.guestHeader}>
           <View style={styles.guestLeft}>
             <View style={styles.avatar}>
@@ -338,6 +336,7 @@ export default function GuestManagementScreen() {
                   .split(' ')
                   .map((n: string) => n[0])
                   .join('')
+                  .slice(0, 2)
                   .toUpperCase()}
               </Text>
             </View>
@@ -369,6 +368,7 @@ export default function GuestManagementScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Guest Contact Details */}
         <View style={styles.guestDetails}>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Phone</Text>
@@ -380,27 +380,33 @@ export default function GuestManagementScreen() {
           </View>
         </View>
 
+        {/* Guest Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{guest.total_bookings || 0}</Text>
             <Text style={styles.statLabel}>Bookings</Text>
           </View>
+          <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{formatCurrency(guest.total_spent)}</Text>
             <Text style={styles.statLabel}>Total Spent</Text>
           </View>
+          <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValueSmall}>{formatDate(guest.last_visit)}</Text>
+            <Text style={styles.statValueDate}>{formatDate(guest.last_visit)}</Text>
             <Text style={styles.statLabel}>Last Visit</Text>
           </View>
         </View>
 
-        {guest.current_booking_status && (
+        {/* Currently Checked In Badge */}
+        {guest.current_booking_status === 'checked-in' && (
           <View style={styles.currentBooking}>
+            <Icon name="home-account" size={14} color="#1e3a8a" style={{ marginRight: 4 }} />
             <Text style={styles.currentBookingText}>Currently Checked In</Text>
           </View>
         )}
 
+        {/* Action Buttons */}
         <View style={styles.cardActions}>
           <TouchableOpacity
             style={styles.actionButtonOutline}
@@ -408,11 +414,16 @@ export default function GuestManagementScreen() {
           >
             <Text style={styles.actionButtonOutlineText}>View Details</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => {
+              Alert.alert('New Booking', `Create booking for ${guest.name}`);
+            }}
+          >
             <Text style={styles.actionButtonText}>New Booking</Text>
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -429,69 +440,92 @@ export default function GuestManagementScreen() {
             <Icon name="download" size={20} color="#1e3a8a" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.addButton} onPress={() => setShowAddModal(true)}>
-            <Icon name="plus" size={20} color="#ffffff" />
+            <Icon name="plus" size={24} color="#ffffff" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Stats Cards */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsScroll}>
-        <View style={styles.statsContainer}>
+      {/* Stats Cards - More Compact */}
+      <View style={styles.statsSection}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.statsContentContainer}
+        >
           <View style={styles.statCard}>
-            <Icon name="account-group" size={24} color="#1e3a8a" />
+            <View style={[styles.statIconContainer, { backgroundColor: '#e0e7ff' }]}>
+              <Icon name="account-group" size={20} color="#1e3a8a" />
+            </View>
             <Text style={styles.statCardValue}>{stats.totalGuests}</Text>
             <Text style={styles.statCardLabel}>Total Guests</Text>
           </View>
           <View style={styles.statCard}>
-            <Icon name="star" size={24} color="#7c3aed" />
+            <View style={[styles.statIconContainer, { backgroundColor: '#f3e8ff' }]}>
+              <Icon name="star" size={20} color="#7c3aed" />
+            </View>
             <Text style={styles.statCardValue}>{stats.vipGuests}</Text>
             <Text style={styles.statCardLabel}>VIP Guests</Text>
           </View>
           <View style={styles.statCard}>
-            <Icon name="home-account" size={24} color="#2563eb" />
+            <View style={[styles.statIconContainer, { backgroundColor: '#dbeafe' }]}>
+              <Icon name="home-account" size={20} color="#2563eb" />
+            </View>
             <Text style={styles.statCardValue}>{stats.currentlyStaying}</Text>
             <Text style={styles.statCardLabel}>Currently Staying</Text>
           </View>
           <View style={styles.statCard}>
-            <Icon name="refresh" size={24} color="#16a34a" />
+            <View style={[styles.statIconContainer, { backgroundColor: '#dcfce7' }]}>
+              <Icon name="refresh" size={20} color="#16a34a" />
+            </View>
             <Text style={styles.statCardValue}>{stats.repeatGuestRate}%</Text>
             <Text style={styles.statCardLabel}>Repeat Rate</Text>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {/* Search and Filter */}
       <View style={styles.filterContainer}>
         <View style={styles.searchContainer}>
-          <Icon name="magnify" size={20} color="#64748b" style={styles.searchIcon} />
+          <Icon name="magnify" size={20} color="#64748b" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search guests..."
+            placeholderTextColor="#94a3b8"
             value={searchTerm}
             onChangeText={setSearchTerm}
           />
+          {searchTerm.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchTerm('')}>
+              <Icon name="close-circle" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+          )}
         </View>
         <TouchableOpacity style={styles.sortButton} onPress={() => setShowSortModal(true)}>
-          <Icon name="sort" size={20} color="#64748b" />
+          <Icon name="tune-variant" size={20} color="#64748b" />
         </TouchableOpacity>
       </View>
 
-      {/* Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll}>
-        <View style={styles.tabs}>
+      {/* Filter Tabs */}
+      <View style={styles.tabsContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContent}
+        >
           {(['all', 'vip', 'regular', 'new'] as const).map(tab => (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && styles.tabActive]}
               onPress={() => setActiveTab(tab)}
+              activeOpacity={0.7}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
                 {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {/* Guest List */}
       <FlatList
@@ -499,13 +533,26 @@ export default function GuestManagementScreen() {
         renderItem={renderGuestCard}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.guestList}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={['#1e3a8a']}
+            tintColor="#1e3a8a"
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Icon name="account-off" size={64} color="#cbd5e1" />
+            <View style={styles.emptyIconContainer}>
+              <Icon name="account-off" size={48} color="#cbd5e1" />
+            </View>
             <Text style={styles.emptyTitle}>No guests found</Text>
             <Text style={styles.emptyText}>
-              {searchTerm ? 'Try adjusting your search' : 'No guests have made bookings yet'}
+              {searchTerm 
+                ? 'Try adjusting your search or filters' 
+                : activeTab !== 'all'
+                ? `No ${activeTab} guests available`
+                : 'No guests have made bookings yet'}
             </Text>
           </View>
         }
@@ -522,7 +569,7 @@ export default function GuestManagementScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.formScroll}>
+            <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false}>
               <Text style={styles.sectionTitle}>Personal Information</Text>
               
               <Text style={styles.inputLabel}>Full Name *</Text>
@@ -531,6 +578,7 @@ export default function GuestManagementScreen() {
                 value={newGuest.name}
                 onChangeText={text => setNewGuest({ ...newGuest, name: text })}
                 placeholder="Enter full name"
+                placeholderTextColor="#94a3b8"
               />
 
               <Text style={styles.inputLabel}>Email *</Text>
@@ -539,6 +587,7 @@ export default function GuestManagementScreen() {
                 value={newGuest.email}
                 onChangeText={text => setNewGuest({ ...newGuest, email: text })}
                 placeholder="Enter email"
+                placeholderTextColor="#94a3b8"
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -549,6 +598,7 @@ export default function GuestManagementScreen() {
                 value={newGuest.phone}
                 onChangeText={text => setNewGuest({ ...newGuest, phone: text })}
                 placeholder="Enter phone number"
+                placeholderTextColor="#94a3b8"
                 keyboardType="phone-pad"
               />
 
@@ -558,6 +608,7 @@ export default function GuestManagementScreen() {
                 value={newGuest.nationality}
                 onChangeText={text => setNewGuest({ ...newGuest, nationality: text })}
                 placeholder="Enter nationality"
+                placeholderTextColor="#94a3b8"
               />
 
               <Text style={styles.sectionTitle}>Identification</Text>
@@ -590,6 +641,7 @@ export default function GuestManagementScreen() {
                 value={newGuest.idNumber}
                 onChangeText={text => setNewGuest({ ...newGuest, idNumber: text })}
                 placeholder="Enter ID number"
+                placeholderTextColor="#94a3b8"
               />
 
               <Text style={styles.inputLabel}>Address</Text>
@@ -598,6 +650,7 @@ export default function GuestManagementScreen() {
                 value={newGuest.address}
                 onChangeText={text => setNewGuest({ ...newGuest, address: text })}
                 placeholder="Enter address"
+                placeholderTextColor="#94a3b8"
                 multiline
                 numberOfLines={2}
               />
@@ -610,6 +663,7 @@ export default function GuestManagementScreen() {
                 value={newGuest.emergencyContact}
                 onChangeText={text => setNewGuest({ ...newGuest, emergencyContact: text })}
                 placeholder="Enter emergency contact name"
+                placeholderTextColor="#94a3b8"
               />
 
               <Text style={styles.inputLabel}>Contact Phone</Text>
@@ -618,6 +672,7 @@ export default function GuestManagementScreen() {
                 value={newGuest.emergencyPhone}
                 onChangeText={text => setNewGuest({ ...newGuest, emergencyPhone: text })}
                 placeholder="Enter emergency contact phone"
+                placeholderTextColor="#94a3b8"
                 keyboardType="phone-pad"
               />
 
@@ -627,6 +682,7 @@ export default function GuestManagementScreen() {
                 value={newGuest.specialRequests}
                 onChangeText={text => setNewGuest({ ...newGuest, specialRequests: text })}
                 placeholder="Any special requirements"
+                placeholderTextColor="#94a3b8"
                 multiline
                 numberOfLines={3}
               />
@@ -643,7 +699,11 @@ export default function GuestManagementScreen() {
                   onPress={handleAddGuest}
                   disabled={submitting}
                 >
-                  <Text style={styles.saveButtonText}>{submitting ? 'Adding...' : 'Add Guest'}</Text>
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Add Guest</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -661,10 +721,10 @@ export default function GuestManagementScreen() {
           <View style={styles.sortModalContent}>
             <Text style={styles.sortModalTitle}>Sort By</Text>
             {[
-              { label: 'Most Recent', value: 'recent' },
-              { label: 'Name A-Z', value: 'name' },
-              { label: 'Most Bookings', value: 'bookings' },
-              { label: 'Highest Spent', value: 'spent' },
+              { label: 'Most Recent', value: 'recent', icon: 'clock-outline' },
+              { label: 'Name A-Z', value: 'name', icon: 'sort-alphabetical-ascending' },
+              { label: 'Most Bookings', value: 'bookings', icon: 'calendar-multiple' },
+              { label: 'Highest Spent', value: 'spent', icon: 'currency-inr' },
             ].map(option => (
               <TouchableOpacity
                 key={option.value}
@@ -674,10 +734,17 @@ export default function GuestManagementScreen() {
                   setShowSortModal(false);
                 }}
               >
-                <Text style={[styles.sortOptionText, sortBy === option.value && styles.sortOptionTextActive]}>
-                  {option.label}
-                </Text>
-                {sortBy === option.value && <Icon name="check" size={20} color="#1e3a8a" />}
+                <View style={styles.sortOptionLeft}>
+                  <Icon name={option.icon} size={20} color={sortBy === option.value ? '#1e3a8a' : '#64748b'} />
+                  <Text style={[styles.sortOptionText, sortBy === option.value && styles.sortOptionTextActive]}>
+                    {option.label}
+                  </Text>
+                </View>
+                {sortBy === option.value && (
+                  <View style={styles.checkmarkContainer}>
+                    <Icon name="check-circle" size={20} color="#1e3a8a" />
+                  </View>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -696,23 +763,30 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8fafc',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
     color: '#64748b',
+    fontWeight: '500',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
     backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#0f172a',
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 14,
@@ -721,62 +795,77 @@ const styles = StyleSheet.create({
   },
   headerButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   exportButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#1e3a8a',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#1e3a8a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  statsScroll: {
-    maxHeight: 120,
+  // Compact Stats Section
+  statsSection: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 16,
-    gap: 12,
+  statsContentContainer: {
+    paddingHorizontal: 16,
+    gap: 10,
   },
   statCard: {
-    width: (width - 64) / 2,
+    width: 110,
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  statIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   statCardValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#0f172a',
-    marginTop: 8,
+    marginTop: 2,
   },
   statCardLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#64748b',
-    marginTop: 4,
+    marginTop: 2,
     textAlign: 'center',
+    fontWeight: '500',
   },
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 16,
-    gap: 8,
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 10,
+    backgroundColor: '#f8fafc',
   },
   searchContainer: {
     flex: 1,
@@ -784,22 +873,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    height: 48,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  searchIcon: {
-    marginRight: 8,
-  },
   searchInput: {
     flex: 1,
-    height: 44,
+    marginLeft: 8,
     fontSize: 15,
     color: '#0f172a',
   },
   sortButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: 12,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
@@ -807,20 +894,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  tabsScroll: {
-    maxHeight: 50,
+  tabsContainer: {
+    backgroundColor: '#f8fafc',
+    paddingBottom: 16,
   },
-  tabs: {
-    flexDirection: 'row',
+  tabsContent: {
     paddingHorizontal: 20,
     gap: 8,
-    marginBottom: 16,
   },
   tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: '#f1f5f9',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    backgroundColor: '#e2e8f0',
   },
   tabActive: {
     backgroundColor: '#1e3a8a',
@@ -828,25 +914,27 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     color: '#64748b',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   tabTextActive: {
     color: '#ffffff',
   },
   guestList: {
     padding: 20,
-    paddingTop: 0,
+    paddingTop: 4,
   },
   guestCard: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   guestHeader: {
     flexDirection: 'row',
@@ -858,146 +946,180 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#dbeafe',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#e0e7ff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
   },
   avatarText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1e3a8a',
+    letterSpacing: 0.5,
   },
   guestInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   guestName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     color: '#0f172a',
+    marginBottom: 4,
   },
   guestEmail: {
     fontSize: 13,
     color: '#64748b',
-    marginTop: 2,
+    marginBottom: 8,
   },
   statusBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    marginTop: 6,
   },
   statusText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   menuButton: {
     padding: 4,
+    marginTop: 4,
   },
   guestDetails: {
     marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   detailLabel: {
     fontSize: 13,
     color: '#64748b',
+    fontWeight: '500',
   },
   detailValue: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#0f172a',
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    alignItems: 'center',
     paddingVertical: 16,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#e2e8f0',
     marginBottom: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
   },
   statItem: {
     alignItems: 'center',
+    flex: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#e2e8f0',
   },
   statValue: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#0f172a',
+    marginBottom: 4,
   },
-  statValueSmall: {
+  statValueDate: {
     fontSize: 12,
     fontWeight: '600',
     color: '#0f172a',
+    marginBottom: 4,
   },
   statLabel: {
     fontSize: 11,
     color: '#64748b',
-    marginTop: 4,
+    fontWeight: '500',
   },
   currentBooking: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#dbeafe',
-    padding: 8,
-    borderRadius: 8,
-    marginBottom: 12,
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 16,
   },
   currentBookingText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#1e3a8a',
     fontWeight: '600',
-    textAlign: 'center',
   },
   cardActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   actionButtonOutline: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
     borderColor: '#e2e8f0',
     alignItems: 'center',
+    backgroundColor: '#ffffff',
   },
   actionButtonOutlineText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: '#64748b',
   },
   actionButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
     backgroundColor: '#1e3a8a',
     alignItems: 'center',
+    shadowColor: '#1e3a8a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   actionButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: '#ffffff',
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
+    paddingHorizontal: 40,
+  },
+  emptyIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#0f172a',
-    marginTop: 16,
+    marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
     color: '#64748b',
-    marginTop: 8,
     textAlign: 'center',
+    lineHeight: 20,
   },
   modalContainer: {
     flex: 1,
@@ -1019,8 +1141,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e2e8f0',
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#0f172a',
   },
   formScroll: {
@@ -1028,17 +1150,17 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#0f172a',
-    marginTop: 16,
-    marginBottom: 12,
+    marginTop: 20,
+    marginBottom: 16,
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#0f172a',
+    fontWeight: '600',
+    color: '#475569',
     marginBottom: 8,
-    marginTop: 8,
+    marginTop: 12,
   },
   input: {
     backgroundColor: '#f8fafc',
@@ -1050,20 +1172,21 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   textArea: {
-    height: 80,
+    height: 90,
     textAlignVertical: 'top',
+    paddingTop: 14,
   },
   idTypeContainer: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
+    gap: 10,
+    paddingVertical: 4,
   },
   idTypeChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
     backgroundColor: '#f1f5f9',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#e2e8f0',
   },
   idTypeChipActive: {
@@ -1073,7 +1196,7 @@ const styles = StyleSheet.create({
   idTypeText: {
     fontSize: 13,
     color: '#64748b',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   idTypeTextActive: {
     color: '#ffffff',
@@ -1081,12 +1204,12 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 24,
+    marginTop: 32,
     marginBottom: 20,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderRadius: 12,
     backgroundColor: '#f1f5f9',
     alignItems: 'center',
@@ -1098,10 +1221,15 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderRadius: 12,
     backgroundColor: '#1e3a8a',
     alignItems: 'center',
+    shadowColor: '#1e3a8a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   saveButtonDisabled: {
     opacity: 0.6,
@@ -1116,33 +1244,49 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   sortModalContent: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    width: width - 80,
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 10,
   },
   sortModalTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#0f172a',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sortOption: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#f1f5f9',
+  },
+  sortOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   sortOptionText: {
     fontSize: 15,
     color: '#64748b',
+    fontWeight: '500',
   },
   sortOptionTextActive: {
     color: '#1e3a8a',
     fontWeight: '600',
+  },
+  checkmarkContainer: {
+    marginLeft: 'auto',
   },
 });

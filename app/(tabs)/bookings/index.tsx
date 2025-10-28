@@ -69,6 +69,21 @@ interface Booking {
   refund_request?: RefundRequest;
 }
 
+const STATUS_COLORS = {
+  pending: { bg: '#FEF3C7', text: '#92400E' },
+  confirmed: { bg: '#DBEAFE', text: '#1E3A8A' },
+  'checked-in': { bg: '#D1FAE5', text: '#065F46' },
+  'checked-out': { bg: '#E5E7EB', text: '#374151' },
+  cancelled: { bg: '#FEE2E2', text: '#991B1B' },
+};
+
+const PAYMENT_STATUS_COLORS = {
+  pending: { bg: '#FEF3C7', text: '#92400E' },
+  partial: { bg: '#DBEAFE', text: '#1E3A8A' },
+  paid: { bg: '#D1FAE5', text: '#065F46' },
+  'pay-at-hotel': { bg: '#E0E7FF', text: '#3730A3' },
+};
+
 export default function BookingsScreen() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -239,6 +254,7 @@ export default function BookingsScreen() {
         });
 
         setBookings(bookingsWithRelations);
+        
       } else {
         setBookings([]);
       }
@@ -312,159 +328,208 @@ export default function BookingsScreen() {
     }
   };
 
-  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
-    try {
-      // Update booking_status table
-      await supabase.from('booking_status').upsert(
-        {
-          booking_id: bookingId,
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'booking_id' }
-      );
-
-      // Update bookings table
-      await supabase
-        .from('bookings')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', bookingId);
-
-      Toast.show({
-        type: 'success',
-        text1: 'Success',
-        text2: `Booking status updated to ${newStatus}`,
-      });
-
-      loadBookings();
-      loadStats();
-    } catch (error) {
-      console.error('Error updating booking:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to update booking status',
-      });
-    }
-  };
-
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
       day: 'numeric',
+      month: 'short',
       year: 'numeric',
     });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-    }).format(amount);
+  const formatTime = (timeString: string) => {
+    if (!timeString) return '';
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
   };
 
-  const getStatusStyle = (status: string) => {
-    const statusMap: { [key: string]: any } = {
-      confirmed: { backgroundColor: '#D1FAE5', color: '#065F46' },
-      pending: { backgroundColor: '#FEF3C7', color: '#92400E' },
-      'checked-in': { backgroundColor: '#DBEAFE', color: '#1E3A8A' },
-      'checked-out': { backgroundColor: '#F3F4F6', color: '#374151' },
-      cancelled: { backgroundColor: '#FEE2E2', color: '#991B1B' },
-    };
-    return statusMap[status] || { backgroundColor: '#F3F4F6', color: '#1F2937' };
+  const handleApproveBooking = async (bookingId: string) => {
+    try {
+      const { error } = await supabase
+        .from('booking_status')
+        .insert({
+          booking_id: bookingId,
+          status: 'confirmed',
+          changed_by: (await supabase.auth.getUser()).data.user?.id,
+          notes: 'Booking approved by owner',
+        });
+
+      if (error) throw error;
+
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Booking approved successfully',
+      });
+
+      loadBookings();
+    } catch (error) {
+      console.error('Error approving booking:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to approve booking',
+      });
+    }
   };
 
-  const renderBookingCard = ({ item: booking }: { item: Booking }) => (
-    <TouchableOpacity
-      style={styles.bookingCard}
-      onPress={() => router.push(`/bookings/${booking.id}` as any)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.bookingHeader}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.guestName}>{booking.guest?.name || 'Unknown Guest'}</Text>
-          <Text style={styles.guestEmail}>{booking.guest?.email}</Text>
-        </View>
-        <View style={[styles.statusBadge, getStatusStyle(booking.status)]}>
-          <Text style={[styles.statusText, { color: getStatusStyle(booking.status).color }]}>
-            {booking.status?.replace('-', ' ')}
-          </Text>
-        </View>
-      </View>
+  const handleRejectBooking = async (bookingId: string) => {
+    try {
+      const { error } = await supabase
+        .from('booking_status')
+        .insert({
+          booking_id: bookingId,
+          status: 'cancelled',
+          changed_by: (await supabase.auth.getUser()).data.user?.id,
+          notes: 'Booking rejected by owner',
+        });
 
-      {booking.refund_request && (
-        <View style={styles.refundBanner}>
-          <Ionicons name="alert-circle" size={16} color="#F59E0B" />
-          <Text style={styles.refundText}>
-            Refund {booking.refund_request.status} - {formatCurrency(booking.refund_request.amount_requested_to_refund)}
-          </Text>
-        </View>
-      )}
+      if (error) throw error;
 
-      <View style={styles.bookingDetails}>
-        <View style={styles.detailRow}>
-          <Ionicons name="business-outline" size={16} color="#6B7280" />
-          <Text style={styles.detailText}>{booking.property?.name || 'N/A'}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="bed-outline" size={16} color="#6B7280" />
-          <Text style={styles.detailText}>
-            {booking.room_type?.name} • {booking.rooms_booked} room(s)
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={16} color="#6B7280" />
-          <Text style={styles.detailText}>
-            {formatDate(booking.check_in_date)} - {formatDate(booking.check_out_date)}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="people-outline" size={16} color="#6B7280" />
-          <Text style={styles.detailText}>
-            {booking.adults} adult{booking.adults !== 1 ? 's' : ''}, {booking.children} children
-          </Text>
-        </View>
-      </View>
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Booking rejected',
+      });
 
-      <View style={styles.bookingFooter}>
-        <View>
-          <Text style={styles.amountLabel}>Total Amount</Text>
-          <Text style={styles.amount}>{formatCurrency(booking.total_amount)}</Text>
-        </View>
-        <View style={styles.paymentBadge}>
-          <Text style={styles.paymentText}>{booking.payment_status}</Text>
-        </View>
-      </View>
+      loadBookings();
+    } catch (error) {
+      console.error('Error rejecting booking:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to reject booking',
+      });
+    }
+  };
 
-      {booking.status === 'pending' && (
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.approveButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              updateBookingStatus(booking.id, 'confirmed');
-            }}
-          >
-            <Ionicons name="checkmark-circle" size={18} color="#fff" />
-            <Text style={styles.approveButtonText}>Approve</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.rejectButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              updateBookingStatus(booking.id, 'cancelled');
-            }}
-          >
-            <Ionicons name="close-circle" size={18} color="#fff" />
-            <Text style={styles.rejectButtonText}>Reject</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </TouchableOpacity>
+  const renderStatCard = (icon: string, value: number, label: string, color: string) => (
+    <View style={styles.statCard}>
+      <Ionicons name={icon as any} size={24} color={color} />
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
   );
 
-  if (loading && !refreshing) {
+  const renderBookingCard = ({ item }: { item: Booking }) => {
+    const statusColor = STATUS_COLORS[item.status] || STATUS_COLORS.pending;
+    const paymentColor = PAYMENT_STATUS_COLORS[item.payment_status] || PAYMENT_STATUS_COLORS.pending;
+
+    return (
+      <TouchableOpacity
+        style={styles.bookingCard}
+        onPress={() => router.push(`/(tabs)/bookings/${item.id}` as any)}
+        activeOpacity={0.7}
+      >
+        {/* Refund Banner */}
+        {item.refund_request && item.refund_request.status === 'pending' && (
+          <View style={styles.refundBanner}>
+            <Ionicons name="warning" size={16} color="#92400E" />
+            <Text style={styles.refundText}>
+              Refund Request: ₹{item.refund_request.amount_requested_to_refund.toLocaleString()}
+            </Text>
+          </View>
+        )}
+
+        {/* Booking Header */}
+        <View style={styles.bookingHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.guestName}>{item.guest?.name || 'Guest'}</Text>
+            <Text style={styles.guestEmail}>{item.guest?.email || ''}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
+            <Text style={[styles.statusText, { color: statusColor.text }]}>{item.status}</Text>
+          </View>
+        </View>
+
+        {/* Booking Details */}
+        <View style={styles.bookingDetails}>
+          <View style={styles.detailRow}>
+            <Ionicons name="business-outline" size={16} color="#6B7280" />
+            <Text style={styles.detailText}>
+              {item.property?.name || 'Property'} • {item.room_type?.name || 'Room'}
+            </Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+            <Text style={styles.detailText}>
+              {formatDate(item.check_in_date)} - {formatDate(item.check_out_date)}
+            </Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Ionicons name="time-outline" size={16} color="#6B7280" />
+            <Text style={styles.detailText}>
+              Check-in: {formatTime(item.check_in_time)} • Check-out: {formatTime(item.check_out_time)}
+            </Text>
+          </View>
+
+          <View style={styles.detailRow}>
+            <Ionicons name="people-outline" size={16} color="#6B7280" />
+            <Text style={styles.detailText}>
+              {item.adults} Adult{item.adults > 1 ? 's' : ''}, {item.children} Child
+              {item.children !== 1 ? 'ren' : ''} • {item.rooms_booked} Room
+              {item.rooms_booked > 1 ? 's' : ''}
+            </Text>
+          </View>
+
+          {item.special_requests && (
+            <View style={styles.detailRow}>
+              <Ionicons name="document-text-outline" size={16} color="#6B7280" />
+              <Text style={[styles.detailText, { fontStyle: 'italic' }]} numberOfLines={2}>
+                {item.special_requests}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Booking Footer */}
+        <View style={styles.bookingFooter}>
+          <View>
+            <Text style={styles.amountLabel}>Total Amount</Text>
+            <Text style={styles.amount}>₹{item.total_amount.toLocaleString()}</Text>
+          </View>
+          <View style={[styles.paymentBadge, { backgroundColor: paymentColor.bg }]}>
+            <Text style={[styles.paymentText, { color: paymentColor.text }]}>
+              {item.payment_status}
+            </Text>
+          </View>
+        </View>
+
+        {/* Quick Actions for Pending Bookings */}
+        {item.status === 'pending' && (
+          <View style={styles.quickActions}>
+            <TouchableOpacity
+              style={styles.approveButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleApproveBooking(item.id);
+              }}
+            >
+              <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+              <Text style={styles.approveButtonText}>Approve</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.rejectButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleRejectBooking(item.id);
+              }}
+            >
+              <Ionicons name="close-circle-outline" size={18} color="#fff" />
+              <Text style={styles.rejectButtonText}>Reject</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#1E3A8A" />
@@ -479,69 +544,60 @@ export default function BookingsScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Bookings</Text>
-          <Text style={styles.headerSubtitle}>Manage guest reservations</Text>
+          <Text style={styles.headerSubtitle}>Manage your property bookings</Text>
         </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('/bookings/new' as any)}
-        >
+        <View style={styles.addButton}>
           <LinearGradient
-            colors={['#1E3A8A', '#1E40AF']}
-            style={styles.addButtonGradient}
+            colors={['#1E3A8A', '#2563EB']}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.addButtonGradient}
           >
-            <Ionicons name="add" size={20} color="#fff" />
+            <TouchableOpacity onPress={() => router.push('/(tabs)/bookings/new' as any)}>
+              <Ionicons name="add" size={24} color="#fff" />
+            </TouchableOpacity>
           </LinearGradient>
-        </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Stats Cards */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.statsContainer}
-        contentContainerStyle={styles.statsContent}
-      >
-        <View style={styles.statCard}>
-          <Ionicons name="calendar-outline" size={24} color="#1E3A8A" />
-          <Text style={styles.statValue}>{stats.totalBookings}</Text>
-          <Text style={styles.statLabel}>Total Bookings</Text>
-        </View>
+      {/* Stats Section */}
+      <View style={styles.statsContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.statsContent}
+        >
+          {renderStatCard('grid-outline', stats.totalBookings, 'Total Bookings', '#1E3A8A')}
+          {renderStatCard('time-outline', stats.pendingBookings, 'Pending', '#F59E0B')}
+          {renderStatCard('enter-outline', stats.checkInsToday, 'Check-ins Today', '#10B981')}
+          {renderStatCard('exit-outline', stats.checkOutsToday, 'Check-outs Today', '#EF4444')}
+        </ScrollView>
+      </View>
 
-        <View style={styles.statCard}>
-          <Ionicons name="time-outline" size={24} color="#F59E0B" />
-          <Text style={styles.statValue}>{stats.pendingBookings}</Text>
-          <Text style={styles.statLabel}>Pending</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Ionicons name="arrow-down-circle-outline" size={24} color="#10B981" />
-          <Text style={styles.statValue}>{stats.checkInsToday}</Text>
-          <Text style={styles.statLabel}>Check-ins Today</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Ionicons name="arrow-up-circle-outline" size={24} color="#EF4444" />
-          <Text style={styles.statValue}>{stats.checkOutsToday}</Text>
-          <Text style={styles.statLabel}>Check-outs Today</Text>
-        </View>
-      </ScrollView>
-
-      {/* Search */}
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search bookings..."
+          placeholder="Search by guest name, email or booking ID"
+          placeholderTextColor="#9CA3AF"
           value={searchTerm}
           onChangeText={setSearchTerm}
-          placeholderTextColor="#9CA3AF"
         />
+        {searchTerm.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchTerm('')}>
+            <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Filters */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersContainer}>
+      {/* Date Filters */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filtersContainer}
+        contentContainerStyle={{ flexGrow: 0 }}
+      >
         {['all', 'today', 'week', 'month'].map((range) => (
           <TouchableOpacity
             key={range}
@@ -549,22 +605,21 @@ export default function BookingsScreen() {
             onPress={() => setDateRange(range)}
           >
             <Text
-              style={[styles.filterChipText, dateRange === range && styles.filterChipTextActive]}
+              style={[
+                styles.filterChipText,
+                dateRange === range && styles.filterChipTextActive,
+              ]}
             >
-              {range === 'all'
-                ? 'All Dates'
-                : range === 'today'
-                ? 'Today'
-                : range === 'week'
-                ? 'This Week'
-                : 'This Month'}
+              {range.charAt(0).toUpperCase() + range.slice(1)}
             </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
-      {/* Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsContainer}>
+      {/* Status Tabs */}
+      <ScrollView horizontal 
+      showsHorizontalScrollIndicator={false} 
+      style={styles.tabsContainer}>
         {['all', 'pending', 'confirmed', 'checked-in', 'checked-out', 'cancelled'].map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -572,12 +627,7 @@ export default function BookingsScreen() {
             onPress={() => setActiveTab(tab)}
           >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab === 'all'
-                ? 'All'
-                : tab
-                    .split('-')
-                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                    .join(' ')}
+              {tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -597,16 +647,16 @@ export default function BookingsScreen() {
             </View>
             <Text style={styles.emptyTitle}>No bookings found</Text>
             <Text style={styles.emptySubtitle}>
-              {searchTerm
-                ? 'Try adjusting your search terms'
-                : 'Get started by creating your first booking'}
+              {searchTerm || dateRange !== 'all' || activeTab !== 'all'
+                ? 'Try adjusting your filters'
+                : 'Your bookings will appear here'}
             </Text>
-            {!searchTerm && (
+            {activeTab === 'all' && !searchTerm && dateRange === 'all' && (
               <TouchableOpacity
                 style={styles.emptyButton}
-                onPress={() => router.push('/bookings/new' as any)}
+                onPress={() => router.push('/(tabs)/bookings/new' as any)}
               >
-                <Text style={styles.emptyButtonText}>Create Booking</Text>
+                <Text style={styles.emptyButtonText}>Add Booking</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -636,7 +686,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -667,10 +718,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+    paddingVertical: 16,
   },
   statsContent: {
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
   },
   statCard: {
     width: 140,
@@ -680,6 +732,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    marginRight: 12,
   },
   statValue: {
     fontSize: 24,
@@ -691,6 +744,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginTop: 4,
+    textAlign: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -715,14 +769,18 @@ const styles = StyleSheet.create({
   filtersContainer: {
     marginBottom: 8,
     paddingHorizontal: 16,
+    height: 70,
   },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    marginRight: 8,
-  },
+filterChip: {
+  paddingHorizontal: 16,
+  paddingVertical: 8,
+  height: 36,
+  borderRadius: 20,
+  backgroundColor: '#F3F4F6',
+  marginRight: 8,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
   filterChipActive: {
     backgroundColor: '#DBEAFE',
   },
@@ -737,14 +795,18 @@ const styles = StyleSheet.create({
   tabsContainer: {
     marginBottom: 8,
     paddingHorizontal: 16,
+    height: 70,
   },
-  tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    marginRight: 8,
-  },
+tab: {
+  paddingHorizontal: 16,
+  paddingVertical: 8,
+  height: 36,
+  borderRadius: 20,
+  backgroundColor: '#F3F4F6',
+  marginRight: 8,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
   tabActive: {
     backgroundColor: '#1E3A8A',
   },
@@ -768,7 +830,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   bookingHeader: {
     flexDirection: 'row',
@@ -800,28 +862,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FEF3C7',
-    padding: 8,
+    padding: 10,
     borderRadius: 8,
     marginBottom: 12,
   },
   refundText: {
     fontSize: 12,
     color: '#92400E',
-    marginLeft: 6,
+    marginLeft: 8,
     fontWeight: '600',
+    flex: 1,
   },
   bookingDetails: {
-    gap: 8,
     marginBottom: 12,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
   },
   detailText: {
     fontSize: 14,
     color: '#374151',
     marginLeft: 8,
+    flex: 1,
   },
   bookingFooter: {
     flexDirection: 'row',
@@ -836,26 +900,23 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   amount: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#1E3A8A',
     marginTop: 2,
   },
   paymentBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
   },
   paymentText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#374151',
     textTransform: 'capitalize',
   },
   quickActions: {
     flexDirection: 'row',
-    gap: 8,
     marginTop: 12,
   },
   approveButton: {
@@ -864,14 +925,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#10B981',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 8,
-    gap: 6,
+    marginRight: 6,
   },
   approveButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    marginLeft: 6,
   },
   rejectButton: {
     flex: 1,
@@ -879,14 +941,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#EF4444',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 8,
-    gap: 6,
+    marginLeft: 6,
   },
   rejectButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    marginLeft: 6,
   },
   emptyState: {
     padding: 40,

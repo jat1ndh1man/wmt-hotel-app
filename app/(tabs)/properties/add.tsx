@@ -188,7 +188,7 @@ export default function AddPropertyScreen() {
       Toast.show({
         type: 'error',
         text1: 'Validation Error',
-        text2: 'Please fix the errors before proceeding',
+        text2: 'Please fill the fields accordingly before proceeding',
       });
     }
   };
@@ -317,27 +317,31 @@ export default function AddPropertyScreen() {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Property Type *</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {propertyTypes.map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      styles.typeButton,
-                      formData.property_type === type && styles.typeButtonActive,
-                    ]}
-                    onPress={() => updateFormData('property_type', type)}
-                  >
-                    <Text
+                <View style={styles.row}>
+                  {propertyTypes.map((type) => (
+                    <TouchableOpacity
+                      key={type}
                       style={[
-                        styles.typeButtonText,
-                        formData.property_type === type && styles.typeButtonTextActive,
+                        styles.typeButton,
+                        formData.property_type === type && styles.typeButtonActive,
                       ]}
+                      onPress={() => updateFormData('property_type', type)}
                     >
-                      {type}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={[
+                          styles.typeButtonText,
+                          formData.property_type === type && styles.typeButtonTextActive,
+                        ]}
+                      >
+                        {type}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </ScrollView>
-              {errors.property_type && <Text style={styles.errorText}>{errors.property_type}</Text>}
+              {errors.property_type && (
+                <Text style={styles.errorText}>{errors.property_type}</Text>
+              )}
             </View>
 
             <View style={styles.inputContainer}>
@@ -357,54 +361,54 @@ export default function AddPropertyScreen() {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Detailed Description</Text>
               <TextInput
-                style={[styles.textArea, errors.description && styles.inputError]}
+                style={styles.textArea}
                 value={formData.description}
                 onChangeText={(text) => updateFormData('description', text)}
-                placeholder="Provide a detailed description..."
+                placeholder="Provide a detailed description of your property..."
                 placeholderTextColor="#9CA3AF"
                 multiline
-                numberOfLines={4}
+                numberOfLines={6}
               />
             </View>
 
-            <View style={styles.row}>
-              <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Base Price (₹/night) *</Text>
-                <TextInput
-                  style={[styles.input, errors.price && styles.inputError]}
-                  value={formData.price}
-                  onChangeText={(text) => updateFormData('price', text)}
-                  placeholder="2999"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                />
-                {errors.price && <Text style={styles.errorText}>{errors.price}</Text>}
-              </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Base Price (per night) *</Text>
+              <TextInput
+                style={[styles.input, errors.price && styles.inputError]}
+                value={formData.price}
+                onChangeText={(text) => updateFormData('price', text)}
+                placeholder="2500"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numeric"
+              />
+              {errors.price && <Text style={styles.errorText}>{errors.price}</Text>}
+            </View>
 
-              <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.label}>Star Category</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {['1', '2', '3', '4', '5'].map((star) => (
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Star Category</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.row}>
+                  {['1', '2', '3', '4', '5'].map((stars) => (
                     <TouchableOpacity
-                      key={star}
+                      key={stars}
                       style={[
                         styles.starButton,
-                        formData.star_category === star && styles.starButtonActive,
+                        formData.star_category === stars && styles.starButtonActive,
                       ]}
-                      onPress={() => updateFormData('star_category', star)}
+                      onPress={() => updateFormData('star_category', stars)}
                     >
                       <Text
                         style={[
                           styles.starButtonText,
-                          formData.star_category === star && styles.starButtonTextActive,
+                          formData.star_category === stars && styles.starButtonTextActive,
                         ]}
                       >
-                        {star}★
+                        {stars} ★
                       </Text>
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
-              </View>
+                </View>
+              </ScrollView>
             </View>
           </View>
         );
@@ -415,94 +419,86 @@ export default function AddPropertyScreen() {
             <Text style={styles.sectionTitle}>Location Details</Text>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Complete Address *</Text>
+              <Text style={styles.label}>Address *</Text>
               <TextInput
-                style={[styles.textArea, errors.address && styles.inputError]}
+                style={[styles.input, errors.address && styles.inputError]}
                 value={formData.address}
                 onChangeText={(text) => updateFormData('address', text)}
-                placeholder="123 Main Street, Business District"
+                placeholder="123 Main Street"
                 placeholderTextColor="#9CA3AF"
-                multiline
-                numberOfLines={3}
               />
               {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
             </View>
 
-            <View style={styles.row}>
-              <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>City *</Text>
-                <TextInput
-                  style={[styles.input, errors.city && styles.inputError]}
-                  value={formData.city}
-                  onChangeText={(text) => updateFormData('city', text)}
-                  placeholder="Mumbai"
-                  placeholderTextColor="#9CA3AF"
-                />
-                {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
-              </View>
-
-              <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.label}>State *</Text>
-                <TextInput
-                  style={[styles.input, errors.state && styles.inputError]}
-                  value={formData.state}
-                  onChangeText={(text) => updateFormData('state', text)}
-                  placeholder="Maharashtra"
-                  placeholderTextColor="#9CA3AF"
-                />
-                {errors.state && <Text style={styles.errorText}>{errors.state}</Text>}
-              </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Area/Locality</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.area}
+                onChangeText={(text) => updateFormData('area', text)}
+                placeholder="Downtown"
+                placeholderTextColor="#9CA3AF"
+              />
             </View>
 
-            <View style={styles.row}>
-              <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Country</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.country}
-                  onChangeText={(text) => updateFormData('country', text)}
-                  placeholder="India"
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
-
-              <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.label}>Pincode *</Text>
-                <TextInput
-                  style={[styles.input, errors.pincode && styles.inputError]}
-                  value={formData.pincode}
-                  onChangeText={(text) => updateFormData('pincode', text)}
-                  placeholder="400001"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                  maxLength={6}
-                />
-                {errors.pincode && <Text style={styles.errorText}>{errors.pincode}</Text>}
-              </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Landmark</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.landmark}
+                onChangeText={(text) => updateFormData('landmark', text)}
+                placeholder="Near City Mall"
+                placeholderTextColor="#9CA3AF"
+              />
             </View>
 
-            <View style={styles.row}>
-              <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Area/Locality</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.area}
-                  onChangeText={(text) => updateFormData('area', text)}
-                  placeholder="Bandra West"
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>City *</Text>
+              <TextInput
+                style={[styles.input, errors.city && styles.inputError]}
+                value={formData.city}
+                onChangeText={(text) => updateFormData('city', text)}
+                placeholder="Mumbai"
+                placeholderTextColor="#9CA3AF"
+              />
+              {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
+            </View>
 
-              <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.label}>Nearby Landmark</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.landmark}
-                  onChangeText={(text) => updateFormData('landmark', text)}
-                  placeholder="Near Gateway of India"
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>State *</Text>
+              <TextInput
+                style={[styles.input, errors.state && styles.inputError]}
+                value={formData.state}
+                onChangeText={(text) => updateFormData('state', text)}
+                placeholder="Maharashtra"
+                placeholderTextColor="#9CA3AF"
+              />
+              {errors.state && <Text style={styles.errorText}>{errors.state}</Text>}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Pincode *</Text>
+              <TextInput
+                style={[styles.input, errors.pincode && styles.inputError]}
+                value={formData.pincode}
+                onChangeText={(text) => updateFormData('pincode', text)}
+                placeholder="400001"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="numeric"
+                maxLength={6}
+              />
+              {errors.pincode && <Text style={styles.errorText}>{errors.pincode}</Text>}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Country</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.country}
+                onChangeText={(text) => updateFormData('country', text)}
+                placeholder="India"
+                placeholderTextColor="#9CA3AF"
+              />
             </View>
           </View>
         );
@@ -517,7 +513,7 @@ export default function AddPropertyScreen() {
               <TextInput
                 style={[styles.input, errors.phone && styles.inputError]}
                 value={formData.phone}
-                onChangeText={(text) => updateFormData('phone', text.replace(/\D/g, '').slice(0, 10))}
+                onChangeText={(text) => updateFormData('phone', text)}
                 placeholder="9876543210"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="phone-pad"
@@ -532,7 +528,7 @@ export default function AddPropertyScreen() {
                 style={[styles.input, errors.email && styles.inputError]}
                 value={formData.email}
                 onChangeText={(text) => updateFormData('email', text)}
-                placeholder="info@grandpalace.com"
+                placeholder="contact@grandpalace.com"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -541,12 +537,12 @@ export default function AddPropertyScreen() {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Website (Optional)</Text>
+              <Text style={styles.label}>Website</Text>
               <TextInput
                 style={styles.input}
                 value={formData.website}
                 onChangeText={(text) => updateFormData('website', text)}
-                placeholder="https://grandpalace.com"
+                placeholder="https://www.grandpalace.com"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="url"
                 autoCapitalize="none"
@@ -559,31 +555,51 @@ export default function AddPropertyScreen() {
         return (
           <View style={styles.tabContent}>
             <Text style={styles.sectionTitle}>Property Images</Text>
+            <Text style={styles.sectionSubtitle}>
+              Upload high-quality images of your property
+            </Text>
 
             <TouchableOpacity
               style={styles.uploadButton}
               onPress={handleImagePick}
               disabled={uploadingImages}
             >
-              <Ionicons name="cloud-upload-outline" size={32} color="#1E3A8A" />
-              <Text style={styles.uploadButtonText}>
-                {uploadingImages ? 'Uploading...' : 'Upload Images'}
-              </Text>
-              <Text style={styles.uploadButtonSubtext}>PNG, JPG, JPEG up to 10MB each</Text>
+              {uploadingImages ? (
+                <ActivityIndicator size="large" color="#1E3A8A" />
+              ) : (
+                <>
+                  <Ionicons name="cloud-upload-outline" size={48} color="#1E3A8A" />
+                  <Text style={styles.uploadButtonText}>Upload Images</Text>
+                  <Text style={styles.uploadButtonSubtext}>
+                    Tap to select multiple images
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
 
             {errors.images && <Text style={styles.errorText}>{errors.images}</Text>}
 
             {formData.images.length > 0 && (
               <View style={styles.imageGrid}>
-                {formData.images.map((image, index) => (
+                {formData.images.map((uri, index) => (
                   <View key={index} style={styles.imageContainer}>
-                    <Image source={{ uri: image }} style={styles.uploadedImage} />
+                    <Image source={{ uri }} style={styles.uploadedImage} />
                     <TouchableOpacity
                       style={styles.removeImageButton}
                       onPress={() => removeImage(index)}
                     >
-                      <Ionicons name="close-circle" size={24} color="#EF4444" />
+                      <LinearGradient
+                        colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.8)']}
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 14,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Ionicons name="close" size={18} color="#fff" />
+                      </LinearGradient>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -595,8 +611,10 @@ export default function AddPropertyScreen() {
       case 'amenities':
         return (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>Property Amenities</Text>
-            <Text style={styles.sectionSubtitle}>Select all amenities available</Text>
+            <Text style={styles.sectionTitle}>Amenities & Facilities</Text>
+            <Text style={styles.sectionSubtitle}>
+              Select all amenities available at your property
+            </Text>
 
             <View style={styles.amenitiesGrid}>
               {amenitiesList.map((amenity) => (
@@ -625,38 +643,51 @@ export default function AddPropertyScreen() {
       case 'policies':
         return (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>Property Policies</Text>
+            <Text style={styles.sectionTitle}>Policies & Rules</Text>
 
-            <View style={styles.row}>
-              <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.label}>Check-in Time *</Text>
-                <TextInput
-                  style={[styles.input, errors.check_in_time && styles.inputError]}
-                  value={formData.check_in_time}
-                  onChangeText={(text) => updateFormData('check_in_time', text)}
-                  placeholder="14:00"
-                  placeholderTextColor="#9CA3AF"
-                />
-                {errors.check_in_time && <Text style={styles.errorText}>{errors.check_in_time}</Text>}
-              </View>
-
-              <View style={[styles.inputContainer, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.label}>Check-out Time *</Text>
-                <TextInput
-                  style={[styles.input, errors.check_out_time && styles.inputError]}
-                  value={formData.check_out_time}
-                  onChangeText={(text) => updateFormData('check_out_time', text)}
-                  placeholder="11:00"
-                  placeholderTextColor="#9CA3AF"
-                />
-                {errors.check_out_time && (
-                  <Text style={styles.errorText}>{errors.check_out_time}</Text>
-                )}
-              </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Check-in Time *</Text>
+              <TextInput
+                style={[styles.input, errors.check_in_time && styles.inputError]}
+                value={formData.check_in_time}
+                onChangeText={(text) => updateFormData('check_in_time', text)}
+                placeholder="14:00"
+                placeholderTextColor="#9CA3AF"
+              />
+              {errors.check_in_time && (
+                <Text style={styles.errorText}>{errors.check_in_time}</Text>
+              )}
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Security Deposit (₹)</Text>
+              <Text style={styles.label}>Check-out Time *</Text>
+              <TextInput
+                style={[styles.input, errors.check_out_time && styles.inputError]}
+                value={formData.check_out_time}
+                onChangeText={(text) => updateFormData('check_out_time', text)}
+                placeholder="11:00"
+                placeholderTextColor="#9CA3AF"
+              />
+              {errors.check_out_time && (
+                <Text style={styles.errorText}>{errors.check_out_time}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>House Rules</Text>
+              <TextInput
+                style={styles.textArea}
+                value={formData.house_rules}
+                onChangeText={(text) => updateFormData('house_rules', text)}
+                placeholder="No smoking, No pets, etc."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Security Deposit</Text>
               <TextInput
                 style={styles.input}
                 value={formData.security_deposit}
@@ -671,9 +702,9 @@ export default function AddPropertyScreen() {
               <Text style={styles.label}>Cancellation Policy</Text>
               <View style={styles.policyButtons}>
                 {[
-                  { value: 'flexible', label: 'Flexible - Free cancellation up to 24 hours' },
-                  { value: 'moderate', label: 'Moderate - 50% refund if cancelled 5 days before' },
-                  { value: 'strict', label: 'Strict - Non-refundable' },
+                  { value: 'flexible', label: 'Flexible' },
+                  { value: 'moderate', label: 'Moderate' },
+                  { value: 'strict', label: 'Strict' },
                 ].map((policy) => (
                   <TouchableOpacity
                     key={policy.value}
@@ -696,19 +727,6 @@ export default function AddPropertyScreen() {
                 ))}
               </View>
             </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>House Rules</Text>
-              <TextInput
-                style={styles.textArea}
-                value={formData.house_rules}
-                onChangeText={(text) => updateFormData('house_rules', text)}
-                placeholder="Any additional rules or guidelines..."
-                placeholderTextColor="#9CA3AF"
-                multiline
-                numberOfLines={4}
-              />
-            </View>
           </View>
         );
 
@@ -728,7 +746,7 @@ export default function AddPropertyScreen() {
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Property</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 24 }} />
       </View>
 
       {/* Progress Bar */}
@@ -739,8 +757,8 @@ export default function AddPropertyScreen() {
         <Text style={styles.progressText}>{Math.round(getProgressPercentage())}% Complete</Text>
       </View>
 
-      {/* Tab Navigation */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsContainer}>
+      {/* Tabs */}
+      <View style={styles.tabsContainer}>
         {TABS.map((tab, index) => {
           const isActive = currentTab === tab.id;
           const isCompleted = completedTabs.includes(tab.id);
@@ -754,17 +772,7 @@ export default function AddPropertyScreen() {
                 isActive && styles.tabItemActive,
                 !canAccess && styles.tabItemDisabled,
               ]}
-              onPress={() => {
-                if (canAccess) {
-                  setCurrentTab(tab.id);
-                } else {
-                  Toast.show({
-                    type: 'info',
-                    text1: 'Complete Previous Steps',
-                    text2: 'Please complete the previous required steps first',
-                  });
-                }
-              }}
+              onPress={() => canAccess && setCurrentTab(tab.id)}
               disabled={!canAccess}
             >
               <View
@@ -775,72 +783,101 @@ export default function AddPropertyScreen() {
                 ]}
               >
                 {isCompleted ? (
-                  <Ionicons name="checkmark" size={16} color="#fff" />
+                  <Ionicons name="checkmark" size={14} color="#fff" />
                 ) : (
-                  <Text style={[styles.tabNumberText, isActive && styles.tabNumberTextActive]}>
+                  <Text
+                    style={[
+                      styles.tabNumberText,
+                      isActive && styles.tabNumberTextActive,
+                    ]}
+                  >
                     {index + 1}
                   </Text>
                 )}
               </View>
-              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
+              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+                {tab.label}
+              </Text>
               {tab.required && !isCompleted && <View style={styles.requiredDot} />}
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </View>
 
-      {/* Tab Content */}
+      {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {renderTabContent()}
       </ScrollView>
 
-      {/* Navigation Buttons */}
+      {/* Footer */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.footerButton, currentTab === 'basic' && styles.footerButtonDisabled]}
+          style={[
+            styles.footerButton,
+            TABS.findIndex((tab) => tab.id === currentTab) === 0 && styles.footerButtonDisabled,
+          ]}
           onPress={goToPreviousTab}
-          disabled={currentTab === 'basic'}
+          disabled={TABS.findIndex((tab) => tab.id === currentTab) === 0}
         >
-          <Ionicons name="arrow-back" size={20} color={currentTab === 'basic' ? '#9CA3AF' : '#1E3A8A'} />
-          <Text style={[styles.footerButtonText, currentTab === 'basic' && styles.footerButtonTextDisabled]}>
+          <Ionicons
+            name="chevron-back"
+            size={20}
+            color={
+              TABS.findIndex((tab) => tab.id === currentTab) === 0 ? '#9CA3AF' : '#1E3A8A'
+            }
+          />
+          <Text
+            style={[
+              styles.footerButtonText,
+              TABS.findIndex((tab) => tab.id === currentTab) === 0 &&
+                styles.footerButtonTextDisabled,
+            ]}
+          >
             Previous
           </Text>
         </TouchableOpacity>
 
-        {currentTab !== 'policies' ? (
-          <TouchableOpacity
-            style={styles.footerButtonPrimary}
-            onPress={proceedToNextTab}
-          >
+        {currentTab === 'policies' ? (
+          <View style={styles.footerButtonPrimary}>
             <LinearGradient
-              colors={['#1E3A8A', '#1E40AF']}
-              style={styles.footerButtonGradient}
+              colors={['#1E3A8A', '#2563EB']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
+              style={styles.footerButtonGradient}
             >
-              <Text style={styles.footerButtonPrimaryText}>Next</Text>
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                onPress={handleSubmit}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Text style={styles.footerButtonPrimaryText}>Submit</Text>
+                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  </>
+                )}
+              </TouchableOpacity>
             </LinearGradient>
-          </TouchableOpacity>
+          </View>
         ) : (
-          <TouchableOpacity
-            style={styles.footerButtonPrimary}
-            onPress={handleSubmit}
-            disabled={isLoading}
-          >
+          <View style={styles.footerButtonPrimary}>
             <LinearGradient
-              colors={['#1E3A8A', '#1E40AF']}
-              style={styles.footerButtonGradient}
+              colors={['#1E3A8A', '#2563EB']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
+              style={styles.footerButtonGradient}
             >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.footerButtonPrimaryText}>Create Property</Text>
-              )}
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                onPress={proceedToNextTab}
+              >
+                <Text style={styles.footerButtonPrimaryText}>Next</Text>
+                <Ionicons name="chevron-forward" size={20} color="#fff" />
+              </TouchableOpacity>
             </LinearGradient>
-          </TouchableOpacity>
+          </View>
         )}
       </View>
     </KeyboardAvoidingView>
@@ -856,66 +893,68 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 4,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#111827',
   },
   progressContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
     backgroundColor: '#fff',
   },
   progressBar: {
-    height: 8,
+    height: 6,
     backgroundColor: '#E5E7EB',
-    borderRadius: 4,
+    borderRadius: 3,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#1E3A8A',
-    borderRadius: 4,
+    borderRadius: 3,
   },
   progressText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
     textAlign: 'right',
   },
   tabsContainer: {
+    flexDirection: 'row',
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    justifyContent: 'space-around',
   },
   tabItem: {
+    flex: 1,
     alignItems: 'center',
-    marginRight: 24,
   },
   tabItemActive: {},
   tabItemDisabled: {
     opacity: 0.5,
   },
   tabNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   tabNumberActive: {
     backgroundColor: '#1E3A8A',
@@ -924,7 +963,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
   },
   tabNumberText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#6B7280',
   },
@@ -932,18 +971,20 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
     fontWeight: '500',
+    textAlign: 'center',
+    maxWidth: 60,
   },
   tabLabelActive: {
     color: '#1E3A8A',
     fontWeight: '600',
   },
   requiredDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: '#F59E0B',
     marginTop: 2,
   },
